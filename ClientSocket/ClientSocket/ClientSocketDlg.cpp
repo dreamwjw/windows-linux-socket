@@ -127,7 +127,7 @@ void CClientSocketDlg::OnSysCommand(UINT nID, LPARAM lParam)
 		CAboutDlg dlgAbout;
 		dlgAbout.DoModal();
 	}
-	else
+	else 
 	{
 		CDialogEx::OnSysCommand(nID, lParam);
 	}
