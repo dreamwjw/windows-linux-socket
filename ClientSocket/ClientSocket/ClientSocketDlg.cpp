@@ -114,8 +114,16 @@ BOOL CClientSocketDlg::OnInitDialog()
 	//m_lcStudent.InsertColumn(0, L"column1", LVCFMT_LEFT, 150);
 	//m_lcStudent.InsertColumn(1, L"column2", LVCFMT_LEFT, 150);
 
-	m_clientsocketsql.Init();
-	m_clientsocketsql.Connect("192.168.241.128", 4000);
+	if(!m_clientsocketsql.Init()) 
+	{
+		MessageBox("Socket Init Failed!");
+		SendMessage(WM_CLOSE);
+	}
+	if(!m_clientsocketsql.Connect("192.168.241.128", 4000))
+	{
+		MessageBox("Socket Connect Failed!");
+		SendMessage(WM_CLOSE);
+	}
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }

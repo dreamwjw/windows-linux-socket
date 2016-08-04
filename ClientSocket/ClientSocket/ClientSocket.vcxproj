@@ -101,6 +101,7 @@
   <ItemGroup>
     <ClInclude Include="ClientSocket.h" />
     <ClInclude Include="ClientSocketDlg.h" />
+    <ClInclude Include="LoginDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="socketclass\ClientSocketSQL.h" />
     <ClInclude Include="socketclass\MySocketClass.h" />
@@ -110,6 +111,7 @@
   <ItemGroup>
     <ClCompile Include="ClientSocket.cpp" />
     <ClCompile Include="ClientSocketDlg.cpp" />
+    <ClCompile Include="LoginDlg.cpp" />
     <ClCompile Include="socketclass\ClientSocketSQL.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>

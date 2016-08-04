@@ -51,6 +51,9 @@
     <ClInclude Include="socketclass\MySocketClass.h">
       <Filter>头文件\socketclass</Filter>
     </ClInclude>
+    <ClInclude Include="LoginDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClientSocket.cpp">
@@ -67,6 +70,9 @@
     </ClCompile>
     <ClCompile Include="socketclass\MySocketClass.cpp">
       <Filter>源文件\socketclass</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginDlg.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

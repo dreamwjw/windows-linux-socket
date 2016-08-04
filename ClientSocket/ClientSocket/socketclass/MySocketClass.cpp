@@ -15,15 +15,19 @@ CMySocketClass::CMySocketClass()
 CMySocketClass::~CMySocketClass()
 {
 	/* put "q" to exit client */
-	int Ret = send(m_Socket, "q", (int)strlen("q"), 0);  
-	if ( Ret == SOCKET_ERROR )  
-	{  
-		PRINTF("Send Info Error::%d\n", GetLastError());  
-	}
-	PRINTF("Send Info Success!\n");  
+	if ( m_Socket != INVALID_SOCKET ) 
+	{
+		int Ret = send(m_Socket, "q", (int)strlen("q"), 0);  
+		if ( Ret == SOCKET_ERROR )  
+		{  
+			PRINTF("Send Info Error::%d\n", GetLastError());  
+		}
+		PRINTF("Send Info Success!\n");  
 
-	/* close socket */  
-	closesocket(m_Socket);  
+		/* close socket */  
+		closesocket(m_Socket);
+	}
+
 	WSACleanup();  
 }
 

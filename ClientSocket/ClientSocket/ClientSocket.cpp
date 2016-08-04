@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "ClientSocket.h"
 #include "ClientSocketDlg.h"
+#include "LoginDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -67,20 +68,50 @@ BOOL CClientSocketApp::InitInstance()
 	// 例如修改为公司或组织名
 	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
 
-	CClientSocketDlg dlg;
-	m_pMainWnd = &dlg;
-	INT_PTR nResponse = dlg.DoModal();
-	if (nResponse == IDOK)
+	//注释掉初始化ClientSocket对话框，先初始化Login对话框，再由Login触发ClientSocket
+	//CClientSocketDlg dlg;
+	//m_pMainWnd = &dlg;
+	//INT_PTR nResponse = dlg.DoModal();
+	//if (nResponse == IDOK)
+	//{
+	//	// TODO: 在此放置处理何时用
+	//	//  “确定”来关闭对话框的代码
+	//}
+	//else if (nResponse == IDCANCEL)
+	//{
+	//	// TODO: 在此放置处理何时用
+	//	//  “取消”来关闭对话框的代码
+	//}
+
+	//用到goto语法的原因是CLoginDlg类和CClientSocketDlg类都拥有类成员m_clientsocketsql，该成员一旦生成就会触发WSAStartup函数，
+	//而这个函数只能同一时刻初始化一次，所以要结束掉CLoginDlg类的生命周期才能定义CClientSocketDlg类
 	{
-		// TODO: 在此放置处理何时用
-		//  “确定”来关闭对话框的代码
-	}
-	else if (nResponse == IDCANCEL)
-	{
-		// TODO: 在此放置处理何时用
-		//  “取消”来关闭对话框的代码
+		CLoginDlg dlg;
+		INT_PTR nResponse = dlg.DoModal();
+		if (nResponse == IDOK)
+		{
+			goto LoginOK;
+		}
+		else if (nResponse == IDCANCEL)
+		{
+			goto LoginCancel;
+		}
 	}
 
+LoginOK:
+	{
+		CClientSocketDlg dlg;
+		m_pMainWnd = &dlg;
+		INT_PTR nResponse = dlg.DoModal();
+		if (nResponse == IDOK)
+		{
+		}
+		else if (nResponse == IDCANCEL)
+		{
+		}
+	}
+
+LoginCancel:
 	// 删除上面创建的 shell 管理器。
 	if (pShellManager != NULL)
 	{
