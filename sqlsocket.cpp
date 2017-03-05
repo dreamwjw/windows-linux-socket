@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <mysql/mysql.h>
 
-#define HELLO_WORLD_SERVER_PORT 4000
+#define HELLO_WORLD_SERVER_PORT 7878
 #define LENGTH_OF_LISTEN_QUEUE 20
 #define BUFFER_SIZE 1024
 #define MIN_BUFFER_SIZE 50
@@ -204,7 +204,6 @@ void *socketthread(void *socket)
    close(client_socket);
 }
 int main(int argc, char **argv) {
-  //printf("Hello world/n");
   struct sockaddr_in server_addr;
   int server_socket;
   int opt = 1;
