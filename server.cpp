@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include <mysql/mysql.h>
 
+#include "protocol.h"
+
 #define HELLO_WORLD_SERVER_PORT 7878
 #define LENGTH_OF_LISTEN_QUEUE 20
 #define BUFFER_SIZE 1024
@@ -203,6 +205,9 @@ void *socketthread(void *socket)
 
    close(client_socket);
 }
+
+void *workthread(void *socket);
+
 int main(int argc, char **argv) {
   struct sockaddr_in server_addr;
   int server_socket;
@@ -263,7 +268,7 @@ int main(int argc, char **argv) {
       }
       printf("Server Accept Success!\n");
 
-      pthread_create(&thread[i], NULL, socketthread, (void *)&client_socket);
+      pthread_create(&thread[i], NULL, workthread, (void *)&client_socket);
       ++i;
     }
     else
@@ -278,4 +283,29 @@ int main(int argc, char **argv) {
 
   close(server_socket);
   return 0;
+}
+
+void *workthread(void *socket)
+{
+	int client_socket = (int)(*((int*)socket));
+
+	char RecvBuffer[BUFFER_SIZE] = {0}, SendBuffer[BUFFER_SIZE] = {0};
+	socklen_t length = 0;
+	int nRet = 0;
+
+	while(1)
+   {
+      bzero(RecvBuffer, BUFFER_SIZE);
+      length = recv(client_socket, RecvBuffer, BUFFER_SIZE, 0);
+      if(length == 26)
+	  {
+		  Header* pHeader = (Header*)RecvBuffer;
+		  if(strcmp(pHeader->szFlag, "WULI") == 0)
+		  {
+
+		  }
+	  }
+   }
+
+   close(client_socket);
 }
