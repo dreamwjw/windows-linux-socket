@@ -7,6 +7,9 @@
 #pragma pack(push)
 #pragma pack (1)
 
+#define WU_HEADER_FLAG_LEN  4
+#define WU_HEADER_FLAG "SK01"
+
 typedef unsigned char          WU_uint8_t;
 typedef unsigned short         WU_uint16_t;
 typedef unsigned int           WU_uint32_t;

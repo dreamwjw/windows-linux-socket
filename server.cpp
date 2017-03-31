@@ -116,7 +116,7 @@ void *workthread(void *socket)
       if(length == 26)
 	  {
 		  Header* pHeader = (Header*)RecvBuffer;
-		  if(strcmp(pHeader->szFlag, "WULI") == 0)
+		  if(memcmp(pHeader->szFlag, WU_HEADER_FLAG, WU_HEADER_FLAG_LEN) == 0)
 		  {
 
 		  }
