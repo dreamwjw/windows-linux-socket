@@ -7,8 +7,10 @@
 #pragma pack(push)
 #pragma pack (1)
 
-#define WU_HEADER_FLAG_LEN  4
-#define WU_HEADER_FLAG "SK01"
+#define WU_HEADER_LEN           26
+#define WU_HEADER_FLAG_LEN      4
+#define WU_HEADER_FLAG          "SK01"
+#define WU_NETWORK_TIMEOUT		1000 * 5
 
 typedef unsigned char          WU_uint8_t;
 typedef unsigned short         WU_uint16_t;
