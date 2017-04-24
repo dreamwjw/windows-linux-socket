@@ -101,7 +101,8 @@ void *workthread(void *socket)
 	  Header hd;
 	  bzero(&hd, sizeof(Header));
 	  length = Net_Receive(client_socket, (char*)&hd, sizeof(Header), 0);
-	  if(length < 0) break; 
+	  if(length < 0) break;
+	  //else if(length == 0) continue;
 
 	  if(memcmp(hd.szFlag, WU_HEADER_FLAG, WU_HEADER_FLAG_LEN) != 0)
 	  {
@@ -128,7 +129,8 @@ void *workthread(void *socket)
 	  bzero(pDataBuff, uiDataLen);
 
 	  length = Net_Receive(client_socket, pDataBuff, uiDataLen, 0);
-	  if(length < 0) break; 
+	  if(length < 0) break;
+	  //else if(length == 0) continue;
 
 	  switch(hd.usCode)
 	  {

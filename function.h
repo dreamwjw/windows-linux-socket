@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include "protocol.h"
+#include "mysql.h"
 
 #define HELLO_WORLD_SERVER_PORT 7878
 #define LENGTH_OF_LISTEN_QUEUE 20
@@ -116,14 +117,14 @@ int Net_Receive(int client_socket, char* buf, int len, int flag)
 {
 	int nRet = NonblockingRead(client_socket, WU_NETWORK_TIMEOUT);
 
-	if(nRet == 0 || nRet == SOCKET_ERROR)
+	if(nRet < 0)
 	{
 		printf("client[%d] Nonblocking Read error, return[%d]\n", client_socket, nRet);
 	}
 
 	int length = recv(client_socket, buf, len, flag);
 
-	if(length == 0) 
+	if(length == 0)
 	{
 		printf("client[%d] exit\n", client_socket);
 		return -1;
@@ -135,7 +136,7 @@ int Net_Receive(int client_socket, char* buf, int len, int flag)
 		return -2;
 	}
 
-	printf("client[%d] NonblockingRead return : %d\n", client_socket, nRet);
+	printf("client[%d] Nonblocking Read return : %d\n", client_socket, nRet);
 	printf("client[%d] recv length : %d\n", client_socket, length);
 
 	return length;
@@ -164,8 +165,8 @@ int Net_Send(int client_socket, char* buf, int len, int flag)
 	return length;
 }
 
-int CreateHeader(Header* pHead, const WU_uint16_t &usCode,
-	const WU_uint32_t &uiDataLen, const WU_uint64_t &ullDstId)
+int CreateHeader(Header* pHead, WU_uint16_t usCode,
+	WU_uint32_t uiDataLen, WU_uint64_t ullDstId)
 {
 	memset(pHead, 0, sizeof(Header));
 	memcpy(pHead->szFlag, WU_HEADER_FLAG, WU_HEADER_FLAG_LEN);
@@ -180,6 +181,7 @@ int CreateHeader(Header* pHead, const WU_uint16_t &usCode,
 int Keep_Alive_Rsp_Function(int client_socket, unsigned long long ullClientID, unsigned short usAliveSeq)
 {
 	Header hd;
+	memset(&hd, 0, sizeof(Header));
 	CreateHeader(&hd, KEEP_ALIVE_RSP, sizeof(KeepAliveRsp), ullClientID);
 
 	Net_Send(client_socket, (char*)&hd, sizeof(hd), 0);
@@ -209,12 +211,13 @@ int Keep_Alive_Req_Function(int client_socket, Header* pHeader, const char* Recv
 int Login_Rsp_Function(int client_socket, unsigned long long ullClientID, unsigned char ucResult)
 {
 	Header hd;
-	CreateHeader(&hd, LOGIN_RSP, sizeof(LoginReq), ullClientID);
+	memset(&hd, 0, sizeof(Header));
+	CreateHeader(&hd, LOGIN_RSP, sizeof(LoginRsp), ullClientID);
 
 	Net_Send(client_socket, (char*)&hd, sizeof(hd), 0);
 
 	LoginRsp lr;
-	memset(&lr, 0, sizeof(lr));
+	memset(&lr, 0, sizeof(LoginRsp));
 	lr.ucResult = ucResult;
 	switch(ucResult)
 	{

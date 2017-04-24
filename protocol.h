@@ -10,9 +10,9 @@
 #define WU_HEADER_LEN          26
 #define WU_HEADER_FLAG_LEN     4
 #define WU_HEADER_FLAG         "SK01"
-#define WU_NETWORK_TIMEOUT	   1000 * 60
+#define WU_NETWORK_TIMEOUT	   1000 * 10
 #define WU_SERVER_ID           0
-#define WU_KEEP_ALIVE_TIMEOUT  60
+#define WU_KEEP_ALIVE_TIMEOUT  10
 
 typedef unsigned char          WU_uint8_t;
 typedef unsigned short         WU_uint16_t;
