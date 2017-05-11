@@ -14,6 +14,8 @@
 #include "protocol.h"
 #include "mysql.h"
 
+extern CMysql* g_pMysql;
+
 #define HELLO_WORLD_SERVER_PORT 7878
 #define LENGTH_OF_LISTEN_QUEUE 20
 #define BUFFER_SIZE 1024
@@ -225,10 +227,7 @@ int Login_Rsp_Function(int client_socket, unsigned long long ullClientID, unsign
 		memcpy(lr.szReason, "success", 128);
 		break;
 	case 1:
-		memcpy(lr.szReason, "password error", 128);
-		break;
-	case 2:
-		memcpy(lr.szReason, "username error", 128);
+		memcpy(lr.szReason, "username or password error", 128);
 		break;
 	default:
 		memcpy(lr.szReason, "unknown error", 128);
@@ -246,25 +245,19 @@ int Login_Req_Function(int client_socket, Header* pHeader, const char* RecvBuffe
 
 	LoginReq* pLoginReq = (LoginReq*)RecvBuffer;
 	printf("username:%s, password:%s\n", pLoginReq->szUserName, pLoginReq->szPassWord);
-
+	
+	unsigned long long ullClientID = g_pMysql->mysql_GetUserID((char*)pLoginReq->szUserName, (char*)pLoginReq->szPassWord);
+	
 	unsigned char ucResult = 0;
-	if(memcmp(pLoginReq->szUserName, "wjw", strlen((const char*)pLoginReq->szUserName)) == 0)
+	if (ullClientID > 0)
 	{
-		if(memcmp(pLoginReq->szPassWord, "123456", strlen((const char*)pLoginReq->szPassWord)) == 0)
-			printf("wjw login success\n");
-		else 
-		{
-			printf("login failed, password error\n");
-			ucResult = 1;
-		}
+		printf("%s login success\n", (char*)pLoginReq->szUserName);
 	}
-	else 
+	else
 	{
-		printf("login failed, username error\n");
-		ucResult = 2;
+		printf("%s login failed, username or password error\n", (char*)pLoginReq->szUserName);
+		ucResult = 1;
 	}
-
-	unsigned long long ullClientID = 1;
 
 	Login_Rsp_Function(client_socket, ullClientID, ucResult);
 

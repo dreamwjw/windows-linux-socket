@@ -47,7 +47,7 @@ typedef struct tagKeepAliveReq
 
 typedef struct tagKeepAliveRsp
 {
-	WU_uint16_t usAliveSeq;                   //
+	WU_uint16_t usAliveSeq;                   
 }KeepAliveRsp;
 
 typedef struct tagLoginReq
@@ -58,7 +58,7 @@ typedef struct tagLoginReq
 
 typedef struct tagLoginRsp
 {
-	WU_uint8_t ucResult;                     //0-success£¬1-user name error£¬2-password error
+	WU_uint8_t ucResult;                     //0 - success; 1 - username or password error; 2 - unknown error
 	WU_uint8_t szReason[128];
 }LoginRsp;
 

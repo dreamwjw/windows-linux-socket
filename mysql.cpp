@@ -35,9 +35,32 @@ CMysql* CMysql::GetInstance()
 	return m_pCMysql;
 }
 
-int CMysql::mysql_GetUserID(const char* szUserName, const char* szPassWord)
+unsigned long long CMysql::mysql_GetUserID(const char* szUserName, const char* szPassWord)
 {
-	return 0;
+	MYSQL_RES *res;
+	MYSQL_FIELD *fields;
+	MYSQL_ROW row;
+
+	char szSelect[m_nSqlLen] = {0};
+	sprintf(szSelect, "select id from users where username = '%s' and password = '%s'", szUserName, szPassWord);
+	if (mysql_query(m_pMysql, szSelect))
+	{
+		printf("%s\n", mysql_error(m_pMysql));
+		return -1;
+	}
+	
+	res = mysql_use_result(m_pMysql);
+	row = mysql_fetch_row(res);
+	
+	unsigned long long nRet = 0;
+	if (row != NULL)
+	{
+		return strtoull(row[0], NULL, 10);
+	}
+	
+	mysql_free_result(res);
+	
+	return nRet;
 }
 
 //int mysql_select(MYSQL *conn, const char *szSelect, char* szResult) 

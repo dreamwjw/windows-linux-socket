@@ -8,12 +8,13 @@ class CMysql
 private:
 	MYSQL*  m_pMysql;
 	static CMysql *m_pCMysql;
+	static const int m_nSqlLen = 256;
 	
 public:
 	CMysql();
 	~CMysql();
 	static CMysql* GetInstance();
-	int mysql_GetUserID(const char* szUserName, const char* szPassWord);
+	unsigned long long mysql_GetUserID(const char* szUserName, const char* szPassWord);
 };
 
 #endif
