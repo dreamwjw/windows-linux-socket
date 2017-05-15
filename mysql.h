@@ -3,6 +3,11 @@
 
 #include <mysql/mysql.h>
 
+#include <vector>
+using namespace std;
+
+#include "protocol.h"
+
 class CMysql
 {
 private:
@@ -15,6 +20,11 @@ public:
 	~CMysql();
 	static CMysql* GetInstance();
 	unsigned long long mysql_GetUserID(const char* szUserName, const char* szPassWord);
+	int mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID);
+	int mysql_DeleteOnlineUsers(int nSocketID);
+	int mysql_SelectOnlineUsers(int nSocketID);
+	int mysql_SelectOnlineUsers(unsigned long long ullUserID);
+	int mysql_SelectUserList(vector<UserNet*>& UserList);
 };
 
 #endif

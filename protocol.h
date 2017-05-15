@@ -23,11 +23,14 @@ typedef short                  WU_int16_t;
 typedef int                    WU_int32_t;
 typedef long long              WU_int64_t;
 
-#define KEEP_ALIVE_REQ   0x2001                    // Client -> Server  --- struct LoginReq
+#define KEEP_ALIVE_REQ          0x2001             // Client -> Server  --- struct LoginReq
 #define KEEP_ALIVE_RSP   (KEEP_ALIVE_REQ + 1)      //CMS Server -> DVR/CMS Client
 
-#define LOGIN_REQ 0x2003                           // Client -> Server  --- struct LoginReq
+#define LOGIN_REQ               0x2003             // Client -> Server  --- struct LoginReq
 #define LOGIN_RSP (LOGIN_REQ + 1)                  // Server -> Client  --- struct LoginRsp
+
+#define GET_USER_LIST_REQ       0x2005             // Client -> Server  --- struct UserNet
+#define GET_USER_LIST_RSP (GET_USER_LIST_REQ + 1)  // Server -> Client  --- struct UserListRsp
 
 typedef struct tagHeader
 {
@@ -58,9 +61,20 @@ typedef struct tagLoginReq
 
 typedef struct tagLoginRsp
 {
-	WU_uint8_t ucResult;                     //0 - success; 1 - username or password error; 2 - unknown error
+	WU_uint8_t ucResult;                     //0 - success; 1 - username or password error; 2 - user has login; 3 - unknown error
 	WU_uint8_t szReason[128];
 }LoginRsp;
+
+typedef struct tagUserNet
+{
+	WU_uint64_t ullUserID;
+	bool        bIsOnline;
+}UserNet;
+
+typedef struct tagUserListRsp
+{
+	WU_uint16_t usLen;
+}UserListRsp;//json string append after
 
 #pragma pack(pop)
 

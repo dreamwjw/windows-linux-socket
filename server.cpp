@@ -3,6 +3,7 @@
 void *workthread(void *socket);
 
 CMysql* g_pMysql = CMysql::GetInstance();
+CMyJson g_MyJson;
 
 int main(int argc, char **argv)
 {
@@ -92,6 +93,8 @@ void *workthread(void *socket)
 	time_t CurTimer, LastTimer;
 	time(&LastTimer);
 
+	unsigned long long ullClientID = 0;
+
 	while (1)
 	{
 		time(&CurTimer);
@@ -148,7 +151,7 @@ void *workthread(void *socket)
 			break;
 		case LOGIN_REQ:
 			{
-				Login_Req_Function(client_socket, &hd, pDataBuff);
+				ullClientID = Login_Req_Function(client_socket, &hd, pDataBuff);
 			}
 			break;
 		default:
