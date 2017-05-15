@@ -5,6 +5,7 @@
 #include <process.h>
 
 #include "protocol.h"
+#include "MyJson.h"
 
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"Iphlpapi.lib")
@@ -13,6 +14,7 @@ WU_uint64_t GetLocalMac();
 static PIP_ADAPTER_INFO g_pInfo=NULL;
 static WU_uint64_t g_ullMacID = GetLocalMac();
 static unsigned short g_usAliveSeq = 0;
+static CMyJson g_MyJson;
 
 int testsend(int sclient);
 void MyOutputDebugString(const char *sFormatString, ...);
@@ -36,7 +38,7 @@ int Keep_Alive_Req_Function(int sclient);
 int Keep_Alive_Rsp_Function(const char* RecvBuffer);
 int Login_Req_Function(int sclient);
 int Login_Rsp_Function(int sclient, const char* RecvBuffer);
-
+int GetUserList_Req_Function(int sclient, unsigned long long ullUserID);
 
 bool g_bExit = false;
 HANDLE g_hThreadRecv = NULL;
@@ -252,13 +254,18 @@ void operation(int sclient)
 			break;
 		case 1:
 			{
-				Login_Req_Function(sclient);
+				stop(sclient);
+				return;	
 			}
 			break;
 		case 2:
 			{
-				stop(sclient);
-				return;
+				Login_Req_Function(sclient);
+			}
+			break;
+		case 3:
+			{
+				GetUserList_Req_Function(sclient, 0);
 			}
 			break;
 		default:
@@ -271,8 +278,9 @@ void showmenu()
 {
 	printf("operation menu:\n");
 	printf("0     ------     clear\n");
-	printf("1     ------     login\n");
-	printf("2     ------     exit\n");
+	printf("1     ------     exit\n");
+	printf("2     ------     login\n");
+	printf("3     ------     get user list\n");
 }
 
 void stop(int sclient)
@@ -478,7 +486,7 @@ int Login_Req_Function(int sclient)
 	memcpy(lr.szUserName, "wjw", 32);
 	memcpy(lr.szPassWord, "123456", 32);
 
-	Net_Send(sclient, (char*)&lr, sizeof(lr), 0);
+	Net_Send(sclient, (char*)&lr, sizeof(LoginReq), 0);
 
 	return 0;
 }
@@ -488,25 +496,60 @@ int Login_Rsp_Function(int sclient, const char* RecvBuffer)
 	printf("LOGIN_RSP\n");
 
 	LoginRsp* pLoginRsp = (LoginRsp*)RecvBuffer;
-	switch(pLoginRsp->ucResult)
+	if(pLoginRsp->ucResult == 0)
 	{
-	case 0:
+		printf("login success, reason:%s\n", pLoginRsp->szReason);
+		int* psclient = new int;
+		*psclient = sclient;
+		g_hThreadSend = (HANDLE)_beginthreadex(NULL, 0, &threadSendHeart, (void*)psclient, 0, NULL);
+	}
+	else
+	{
+		printf("login failed, reason:%s\n", pLoginRsp->szReason);
+	}
+
+	return 0;
+}
+
+int GetUserList_Req_Function(int sclient, unsigned long long ullUserID)
+{
+	Header hd;
+	CreateHeader(&hd, GET_USER_LIST_REQ, sizeof(LoginReq), WU_SERVER_ID);
+
+	Net_Send(sclient, (char*)&hd, sizeof(hd), 0);
+
+	//因为数据包一定要有数据，所以就随便加个数据进去，其实这个数据是没有用到的
+	UserNet un;
+	memset(&un, 0, sizeof(UserNet));
+	un.ullUserID = ullUserID;
+	un.bIsOnline = true;
+
+	Net_Send(sclient, (char*)&un, sizeof(UserNet), 0);
+
+	return 0;
+}
+
+int GetUserList_Rsp_Function(int sclient, const char* RecvBuffer)
+{
+	printf("GET_USER_LIST_RSP\n");
+
+	UserListRsp* pUserListRsp = (UserListRsp*)RecvBuffer;
+	char* pUserList = new char[pUserListRsp->usLen];
+	memcpy(pUserList, pUserListRsp+sizeof(UserListRsp), pUserListRsp->usLen);
+
+	vector<UserNet*> vecUserList;
+	g_MyJson.GetUserListJasonData(pUserList, vecUserList);
+
+
+
+	int nCount = vecUserList.size();
+	for(int i = 0; i < nCount; i++)
+	{
+		if(vecUserList[i] != NULL)
 		{
-			printf("login success, reason:%s\n", pLoginRsp->szReason);
-			int* psclient = new int;
-			*psclient = sclient;
-			g_hThreadSend = (HANDLE)_beginthreadex(NULL, 0, &threadSendHeart, (void*)psclient, 0, NULL);
+			delete vecUserList[i];
+			vecUserList[i] = NULL;
 		}
-		break;
-	case 1:
-		printf("login failed, reason:%s\n", pLoginRsp->szReason);
-		break;
-	case 2:
-		printf("login failed, reason:%s\n", pLoginRsp->szReason);
-		break;
-	default:
-		printf("login failed, reason:%s\n", pLoginRsp->szReason);
-		break;
 	}
 
 	return 0;
