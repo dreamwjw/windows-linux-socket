@@ -15,6 +15,7 @@ static PIP_ADAPTER_INFO g_pInfo=NULL;
 static WU_uint64_t g_ullMacID = GetLocalMac();
 static unsigned short g_usAliveSeq = 0;
 static CMyJson g_MyJson;
+static char g_szUserName[32] = {0};
 
 int testsend(int sclient);
 void MyOutputDebugString(const char *sFormatString, ...);
@@ -38,8 +39,12 @@ int Keep_Alive_Req_Function(int sclient);
 int Keep_Alive_Rsp_Function(const char* RecvBuffer);
 int Login_Req_Function(int sclient);
 int Login_Rsp_Function(int sclient, const char* RecvBuffer);
-int GetUserList_Req_Function(int sclient, unsigned long long ullUserID);
+int GetUserList_Req_Function(int sclient);
 int GetUserList_Rsp_Function(int sclient, const char* RecvBuffer);
+int TalkWithUser_Req_Function(int sclient);
+int TalkWithUser_Rsp_Function(int sclient, const char* RecvBuffer);
+
+int mystrchr(char* str, int c, char* szUserName, char* szContent);
 
 bool g_bExit = false;
 HANDLE g_hThreadRecv = NULL;
@@ -227,6 +232,11 @@ unsigned int __stdcall threadRecv(void* pParam)
 				GetUserList_Rsp_Function(sclient, pDataBuff);
 			}
 			break;
+		case TALK_WITH_USER_RSP:
+			{
+				TalkWithUser_Rsp_Function(sclient, pDataBuff);
+			}
+			break;
 		default:
 			break;
 		}
@@ -270,7 +280,12 @@ void operation(int sclient)
 			break;
 		case 3:
 			{
-				GetUserList_Req_Function(sclient, 0);
+				GetUserList_Req_Function(sclient);
+			}
+			break;
+		case 4:
+			{
+				TalkWithUser_Req_Function(sclient);
 			}
 			break;
 		default:
@@ -286,6 +301,7 @@ void showmenu()
 	printf("1     ------     exit\n");
 	printf("2     ------     login\n");
 	printf("3     ------     get user list\n");
+	printf("4     ------     talk with user\n");
 }
 
 void stop(int sclient)
@@ -481,9 +497,9 @@ int Keep_Alive_Rsp_Function(const char* RecvBuffer)
 
 int Login_Req_Function(int sclient)
 {
-	char szUserName[32] = {0}, szPassWord[32] = {0};
+	char szPassWord[32] = {0};
 	printf("UserName:");
-	scanf_s("%s", szUserName, 32);
+	scanf_s("%s", g_szUserName, 32);
 	//getchar();
 	printf("PassWord:");
 	scanf_s("%s", szPassWord, 32);
@@ -495,7 +511,7 @@ int Login_Req_Function(int sclient)
 
 	LoginReq lr;
 	memset(&lr, 0, sizeof(LoginReq));
-	memcpy(lr.szUserName, szUserName, 32);
+	memcpy(lr.szUserName, g_szUserName, 32);
 	memcpy(lr.szPassWord, szPassWord, 32);
 
 	Net_Send(sclient, (char*)&lr, sizeof(LoginReq), 0);
@@ -520,7 +536,7 @@ int Login_Rsp_Function(int sclient, const char* RecvBuffer)
 	return 0;
 }
 
-int GetUserList_Req_Function(int sclient, unsigned long long ullUserID)
+int GetUserList_Req_Function(int sclient)
 {
 	Header hd;
 	CreateHeader(&hd, GET_USER_LIST_REQ, 0, WU_SERVER_ID);
@@ -535,12 +551,12 @@ int GetUserList_Rsp_Function(int sclient, const char* RecvBuffer)
 	printf("GET_USER_LIST_RSP\n");
 
 	UserListRsp* pUserListRsp = (UserListRsp*)RecvBuffer;
-	char* pUserList = new char[pUserListRsp->usLen];
-	memcpy(pUserList, RecvBuffer+sizeof(UserListRsp), pUserListRsp->usLen);
+	char* szUserList = new char[pUserListRsp->usLen];
+	memcpy(szUserList, RecvBuffer+sizeof(UserListRsp), pUserListRsp->usLen);
 
 	vector<UserNet*> vecUserList;
-	g_MyJson.GetUserListJasonData(pUserList, vecUserList);
-	delete[] pUserList;
+	g_MyJson.GetUserListJasonData(szUserList, vecUserList);
+	delete[] szUserList;
 
 	int nCount = vecUserList.size();
 	for(int i = 0; i < nCount; i++)
@@ -553,6 +569,65 @@ int GetUserList_Rsp_Function(int sclient, const char* RecvBuffer)
 			vecUserList[i] = NULL;
 		}
 	}
+
+	return 0;
+}
+
+int TalkWithUser_Req_Function(int sclient)
+{
+	printf("please follow this format, \"username,......\" \n");
+	char szText[1024] = {0};
+	scanf_s("%s", szText, 1024);
+
+	char szContent[1024] = {0};
+	char szUserName[32] = {0};
+	mystrchr(szText, ',', szUserName, szContent);
+
+	Header hd;
+	memset(&hd, 0, sizeof(Header));
+	CreateHeader(&hd, TALK_WITH_USER_REQ, strlen(szContent)+sizeof(TalkWithUser), WU_SERVER_ID);
+
+	Net_Send(sclient, (char*)&hd, sizeof(hd), 0);
+
+	TalkWithUser twu;
+	memset(&twu, 0, sizeof(TalkWithUser));
+	twu.usLen = strlen(szContent);
+	memcpy(twu.szFromUser, g_szUserName, 32);
+	memcpy(twu.szToUser, szUserName, 32);
+	char* szData = (char*)malloc(twu.usLen + sizeof(TalkWithUser));
+	memcpy(szData, &twu, sizeof(TalkWithUser));
+	memcpy(szData+sizeof(TalkWithUser), szContent, twu.usLen);
+
+	Net_Send(sclient, szData, sizeof(TalkWithUser)+twu.usLen, 0);
+
+	free(szData);
+
+	return 0;
+}
+
+int TalkWithUser_Rsp_Function(int sclient, const char* RecvBuffer)
+{
+	TalkWithUser* pTalkWithUser = (TalkWithUser*)RecvBuffer;
+	char* szContent = (char*)malloc(pTalkWithUser->usLen + 1);
+	memset(szContent, 0, pTalkWithUser->usLen + 1);
+	//szContent[pTalkWithUser->usLen + 1] = '\0';
+	memcpy(szContent, RecvBuffer+sizeof(TalkWithUser), pTalkWithUser->usLen);
+	
+	printf("%s say to %s : %s \n", pTalkWithUser->szFromUser, pTalkWithUser->szToUser, szContent);
+
+	free(szContent);
+
+	return 0;
+}
+
+int mystrchr(char* str, int c, char* szUserName, char* szContent)
+{
+	char *pos = strchr(str,c);
+
+	if(pos == NULL) return -1;
+
+	memcpy(szUserName, str, pos - str);
+	strcpy_s(szContent, 1024, pos+1);
 
 	return 0;
 }
