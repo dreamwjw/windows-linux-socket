@@ -356,4 +356,61 @@ int GetUserList_Req_Function(int client_socket, unsigned long long ullClientID)
 	return 0;
 }
 
+int TalkWithUser_Rsp_Function(int ToUserSocketID, unsigned long long ullToUserID, const char* szContent,
+	const char* szFromUser, const char* szToUser)
+{
+	Header hd;
+	memset(&hd, 0, sizeof(Header));
+	CreateHeader(&hd, TALK_WITH_USER_RSP, strlen(szContent)+sizeof(TalkWithUser), ullToUserID);
+
+	Net_Send(ToUserSocketID, (char*)&hd, sizeof(hd), 0);
+
+	TalkWithUser twu;
+	memset(&twu, 0, sizeof(TalkWithUser));
+	twu.usLen = strlen(szContent);
+	memcpy(twu.szFromUser, szFromUser, 32);
+	memcpy(twu.szToUser, szToUser, 32);
+	char* szData = (char*)malloc(twu.usLen + sizeof(TalkWithUser));
+	memcpy(szData, &twu, sizeof(TalkWithUser));
+	memcpy(szData+sizeof(TalkWithUser), szContent, twu.usLen);
+
+	Net_Send(ToUserSocketID, szData, sizeof(TalkWithUser)+twu.usLen, 0);
+
+	free(szData);
+
+	return 0;
+}
+
+int TalkWithUser_Req_Function(int client_socket, const char* RecvBuffer, unsigned long long ullClientID)
+{
+	printf("TALK_WITH_USER_REQ\n");
+
+	if(!UserIsOnline(ullClientID))
+	{
+		printf("user[%llu] is offline\n", ullClientID);
+		return -1;
+	}
+
+	TalkWithUser* pTalkWithUser = (TalkWithUser*)RecvBuffer;
+	char* szContent = (char*)malloc(pTalkWithUser->usLen);
+	memcpy(szContent, RecvBuffer+sizeof(TalkWithUser), pTalkWithUser->usLen);
+
+	unsigned long long ullUserID = 0;
+	int nSocketID = 0;
+	g_pMysql->mysql_SelectUserIDAndSocketID((char*)pTalkWithUser->szToUser, ullUserID, nSocketID);
+
+	if(ullUserID ==0 || nSocketID == 0)
+	{
+		printf("user[%s] is offline\n", (char*)pTalkWithUser->szToUser);
+		return -2;
+	}
+
+	TalkWithUser_Rsp_Function(nSocketID, ullUserID, szContent, 
+		(char*)pTalkWithUser->szFromUser, (char*)pTalkWithUser->szToUser);
+
+	free(szContent);
+
+	return 0;
+}
+
 #endif

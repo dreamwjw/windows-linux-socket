@@ -23,14 +23,17 @@ typedef short                  WU_int16_t;
 typedef int                    WU_int32_t;
 typedef long long              WU_int64_t;
 
-#define KEEP_ALIVE_REQ          0x2001             // Client -> Server  --- struct LoginReq
-#define KEEP_ALIVE_RSP   (KEEP_ALIVE_REQ + 1)      //CMS Server -> DVR/CMS Client
+#define KEEP_ALIVE_REQ          0x2001                // Client -> Server  --- struct LoginReq
+#define KEEP_ALIVE_RSP    (KEEP_ALIVE_REQ + 1)        // Server -> Client  --- struct KeepAliveRsp
 
-#define LOGIN_REQ               0x2003             // Client -> Server  --- struct LoginReq
-#define LOGIN_RSP (LOGIN_REQ + 1)                  // Server -> Client  --- struct LoginRsp
+#define LOGIN_REQ               0x2003                // Client -> Server  --- struct LoginReq
+#define LOGIN_RSP (LOGIN_REQ + 1)                     // Server -> Client  --- struct LoginRsp
 
-#define GET_USER_LIST_REQ       0x2005             // Client -> Server
-#define GET_USER_LIST_RSP (GET_USER_LIST_REQ + 1)  // Server -> Client  --- struct UserListRsp
+#define GET_USER_LIST_REQ       0x2005                // Client -> Server
+#define GET_USER_LIST_RSP  (GET_USER_LIST_REQ + 1)    // Server -> Client  --- struct UserListRsp
+
+#define TALK_WITH_USER_REQ      0x2007                // Client -> Server  --- struct TalkWithUser
+#define TALK_WITH_USER_RSP (TALK_WITH_USER_REQ + 1)   // Server -> Client  --- 
 
 typedef struct tagHeader
 {
@@ -75,6 +78,13 @@ typedef struct tagUserListRsp
 {
 	WU_uint16_t usLen;                       
 }UserListRsp;//json string append after
+
+typedef struct tagTalkWithUser
+{
+	WU_uint8_t szFromUser[32];              //from user
+	WU_uint8_t szToUser[32];                //to user
+	WU_uint16_t usLen;                      //content length
+}TalkWithUser;// content string append after
 
 #pragma pack(pop)
 

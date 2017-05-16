@@ -163,6 +163,11 @@ void *workthread(void *socket)
 				GetUserList_Req_Function(client_socket, ullClientID);
 			}
 			break;
+		case TALK_WITH_USER_REQ:
+			{
+				TalkWithUser_Req_Function(client_socket, pDataBuff, ullClientID);
+			}
+			break;
 		default:
 			break;
 		}

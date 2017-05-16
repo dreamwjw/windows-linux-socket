@@ -63,7 +63,7 @@ unsigned long long CMysql::mysql_GetUserID(const char* szUserName, const char* s
 	
 	res = mysql_store_result(m_pMysql);
 
-	unsigned long long nRet = 0;
+	unsigned long long ullUserID = 0;
 	int nRow = mysql_num_rows(res);
 	if(nRow >= 1)
 	{
@@ -71,13 +71,46 @@ unsigned long long CMysql::mysql_GetUserID(const char* szUserName, const char* s
 		
 		if (row != NULL)
 		{
-			nRet = strtoull(row[0], NULL, 10);
+			ullUserID = strtoull(row[0], NULL, 10);
 		}
 	}
 	
 	mysql_free_result(res); 
 	
-	return nRet;
+	return ullUserID;
+}
+
+unsigned long long CMysql::mysql_GetUserID(const char* szUserName)
+{
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+
+	char szSelect[m_nSqlLen] = {0};
+	sprintf(szSelect, "select * from users where username = '%s'", szUserName);
+	printf("%s\n", szSelect);
+	if (mysql_query(m_pMysql, szSelect))
+	{
+		printf("%s\n", mysql_error(m_pMysql));
+		return -1;
+	}
+
+	res = mysql_store_result(m_pMysql);
+
+	unsigned long long ullUserID = 0;
+	int nRow = mysql_num_rows(res);
+	if(nRow >= 1)
+	{
+		row = mysql_fetch_row(res);
+
+		if (row != NULL)
+		{
+			ullUserID = strtoull(row[0], NULL, 10);
+		}
+	}
+
+	mysql_free_result(res); 
+
+	return ullUserID;
 }
 
 int CMysql::mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID, unsigned long long ullMacID)
@@ -206,53 +239,43 @@ int CMysql::mysql_SelectUserList(vector<UserNet*>& UserList)
 
 	return 0;
 }
-//int mysql_select(MYSQL *conn, const char *szSelect, char* szResult) 
-//{
-//	MYSQL_RES *res;
-//	MYSQL_FIELD *fields;
-//	MYSQL_ROW row;
-//
-//	if (mysql_query(conn, szSelect))
-//	{
-//		printf("%s\n", mysql_error(conn));
-//		return -1;
-//	}
-//
-//	res = mysql_use_result(conn);
-//	int nFields = mysql_num_fields(res);
-//
-//	char szTempBuffer[32] = {0};
-//	fields = mysql_fetch_fields(res);
-//	for (int i = 0; i < nFields; i++)
-//	{
-//		sprintf(szTempBuffer, "%s ", fields[i].name);
-//		strcat(szResult, szTempBuffer);
-//	}
-//
-//	while ((row = mysql_fetch_row(res)) != NULL)
-//	{
-//		for (int i = 0; i < nFields; i++)
-//		{
-//			sprintf(szTempBuffer, "%s ", row[i]);
-//			strcat(szResult, szTempBuffer);
-//		}
-//	}
-//
-//	mysql_free_result(res);
-//
-//	return 0;
-//}
-//
-//int mysql_noselect(MYSQL *conn, const char* szNoSelect, char* szResult) 
-//{
-//	if (mysql_query(conn, szNoSelect))
-//	{
-//		printf("%s\n", mysql_error(conn));
-//		return -1;
-//	}
-//
-//	int nAffectedRow =  mysql_affected_rows(conn);
-//	sprintf(szResult, "%d rows affected\n", nAffectedRow);
-//
-//	return 0;
-//}
+
+int CMysql::mysql_SelectUserIDAndSocketID(const char* szUserName, unsigned long long& ullUserID,
+	int& nSocketID)
+{
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+
+	ullUserID = mysql_GetUserID(szUserName);
+	if(ullUserID == 0)
+	{
+		printf("user[%s] is not exist", szUserName);
+		return -1;
+	}
+
+	char szSelect[m_nSqlLen] = {0};
+	sprintf(szSelect, "select * from online_users where user_id = %llu", ullUserID);
+	printf("%s\n", szSelect);
+	if (mysql_query(m_pMysql, szSelect))
+	{
+		printf("%s\n", mysql_error(m_pMysql));
+		return -2;
+	}
+
+	res = mysql_store_result(m_pMysql);
+
+	int nRow = mysql_num_rows(res);
+	if(nRow >= 1)
+	{
+		row = mysql_fetch_row(res);
+
+		if (row != NULL)
+		{
+			nSocketID = atoi(row[2]);
+		}
+	}
+
+	mysql_free_result(res);
+
+	return 0;
+}
