@@ -129,18 +129,22 @@ void *workthread(void *socket)
 		}
 
 		unsigned int uiDataLen = hd.uiTotalLength - WU_HEADER_LEN;
-		char *pDataBuff = (char *)malloc(uiDataLen);
-		if (pDataBuff == NULL)
+		char *pDataBuff = NULL;
+		if(uiDataLen != 0)
 		{
-			printf("Insufficient memory available\n");
-			break;
+			pDataBuff = (char *)malloc(uiDataLen);
+			if (pDataBuff == NULL)
+			{
+				printf("Insufficient memory available\n");
+				break;
+			}
+			bzero(pDataBuff, uiDataLen);
+
+			length = Net_Receive(client_socket, pDataBuff, uiDataLen, 0);
+			if (length < 0) break;
+			//else if(length == 0) continue;
 		}
-		bzero(pDataBuff, uiDataLen);
-
-		length = Net_Receive(client_socket, pDataBuff, uiDataLen, 0);
-		if (length < 0) break;
-		//else if(length == 0) continue;
-
+		
 		switch (hd.usCode)
 		{
 		case KEEP_ALIVE_REQ:
@@ -151,7 +155,12 @@ void *workthread(void *socket)
 			break;
 		case LOGIN_REQ:
 			{
-				ullClientID = Login_Req_Function(client_socket, &hd, pDataBuff);
+				ullClientID = Login_Req_Function(client_socket, &hd, pDataBuff, hd.ullSrcId);
+			}
+			break;
+		case GET_USER_LIST_REQ:
+			{
+				GetUserList_Req_Function(client_socket, ullClientID);
 			}
 			break;
 		default:

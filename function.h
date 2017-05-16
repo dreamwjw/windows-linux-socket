@@ -206,14 +206,18 @@ int Keep_Alive_Req_Function(int client_socket, Header* pHeader, const char* Recv
 {
 	printf("KEEP_ALIVE_REQ\n");
 
-	int nRet = 0;
+	if(RecvBuffer == NULL)
+	{
+		printf("RecvBuffer is null");
+		return -1;
+	}
 
 	KeepAliveReq* pKeepAliveReq = (KeepAliveReq*)RecvBuffer;
 	printf("alive seq : [%u]\n", pKeepAliveReq->usAliveSeq);
 
 	Keep_Alive_Rsp_Function(client_socket, pHeader->ullSrcId, pKeepAliveReq->usAliveSeq);
 
-	return nRet;
+	return 0;
 }
 
 int Login_Rsp_Function(int client_socket, unsigned long long ullClientID, unsigned char ucResult)
@@ -250,9 +254,15 @@ int Login_Rsp_Function(int client_socket, unsigned long long ullClientID, unsign
 	return nRet;
 }
 
-unsigned long long Login_Req_Function(int client_socket, Header* pHeader, const char* RecvBuffer)
+unsigned long long Login_Req_Function(int client_socket, Header* pHeader, const char* RecvBuffer, unsigned long long ullMacID)
 {
 	printf("LOGIN_REQ\n");
+
+	if(RecvBuffer == NULL)
+	{
+		printf("RecvBuffer is null");
+		return 0;
+	}
 
 	LoginReq* pLoginReq = (LoginReq*)RecvBuffer;
 	printf("username:%s, password:%s\n", pLoginReq->szUserName, pLoginReq->szPassWord);
@@ -262,7 +272,7 @@ unsigned long long Login_Req_Function(int client_socket, Header* pHeader, const 
 	unsigned char ucResult = 0;
 	if (ullClientID > 0)
 	{
-		if(g_pMysql->mysql_AddOnlineUsers(client_socket, ullClientID) == 1)
+		if(g_pMysql->mysql_AddOnlineUsers(client_socket, ullClientID, ullMacID) == 1)
 		{
 			printf("%s login success\n", (char*)pLoginReq->szUserName);
 		}
@@ -296,17 +306,10 @@ int GetUserList_Rsp_Function(int client_socket, unsigned long long ullClientID)
 {
 	printf("GET_USER_LIST_RSP\n");
 
-	int nRet = 0;
-
-	Header hd;
-	memset(&hd, 0, sizeof(Header));
-	CreateHeader(&hd, LOGIN_RSP, sizeof(LoginRsp), ullClientID);
-
-	Net_Send(client_socket, (char*)&hd, sizeof(hd), 0);
-
 	vector<UserNet*> vecUserList;
 	g_pMysql->mysql_SelectUserList(vecUserList);
 	char* szUserList = g_MyJson.SetUserListJasonData(vecUserList);
+	printf("UserList : %s \n", szUserList);
 	int nCount = vecUserList.size();
 	for(int i = 0; i < nCount; i++)
 	{
@@ -317,29 +320,40 @@ int GetUserList_Rsp_Function(int client_socket, unsigned long long ullClientID)
 		}
 	}
 
+	Header hd;
+	memset(&hd, 0, sizeof(Header));
+	CreateHeader(&hd, GET_USER_LIST_RSP, strlen(szUserList) + sizeof(UserListRsp), ullClientID);
+
+	Net_Send(client_socket, (char*)&hd, sizeof(hd), 0);
+
 	UserListRsp ulr;
 	memset(&ulr, 0, sizeof(UserListRsp));
 	ulr.usLen = strlen(szUserList);
-	memcpy(&ulr+sizeof(UserListRsp), szUserList, ulr.usLen);
+	char* szData = (char*)malloc(ulr.usLen + sizeof(UserListRsp));
+	memcpy(szData, &ulr, sizeof(UserListRsp));
+	memcpy(szData+sizeof(UserListRsp), szUserList, ulr.usLen);
 
-	Net_Send(client_socket, (char*)&ulr, sizeof(LoginRsp)+ulr.usLen, 0);
+	Net_Send(client_socket, szData, sizeof(UserListRsp)+ulr.usLen, 0);
 
 	cJason_free(szUserList);
+	free(szData);
 
-	return nRet;
+	return 0;
 }
 
-int GetUserList_Req_Function(int client_socket, Header* pHeader, unsigned long long ullClientID)
+int GetUserList_Req_Function(int client_socket, unsigned long long ullClientID)
 {
-	if(!UserIsOnline(ullClientID)) return -1;
-
 	printf("GET_USER_LIST_REQ\n");
 
-	int nRet = 0;
+	if(!UserIsOnline(ullClientID))
+	{
+		printf("user[%llu] is offline\n", ullClientID);
+		return -1;
+	}
 
 	GetUserList_Rsp_Function(client_socket, ullClientID);
 
-	return nRet;
+	return 0;
 }
 
 #endif

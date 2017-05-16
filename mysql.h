@@ -14,13 +14,16 @@ private:
 	MYSQL*  m_pMysql;
 	static CMysql *m_pCMysql;
 	static const int m_nSqlLen = 256;
+
+private:
+	int mysql_FreeResult();
 	
 public:
 	CMysql();
 	~CMysql();
 	static CMysql* GetInstance();
 	unsigned long long mysql_GetUserID(const char* szUserName, const char* szPassWord);
-	int mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID);
+	int mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID, unsigned long long ullMacID);
 	int mysql_DeleteOnlineUsers(int nSocketID);
 	int mysql_SelectOnlineUsers(int nSocketID);
 	int mysql_SelectOnlineUsers(unsigned long long ullUserID);

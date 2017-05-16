@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "mysql.h"
 
@@ -35,13 +36,24 @@ CMysql* CMysql::GetInstance()
 	return m_pCMysql;
 }
 
+int CMysql::mysql_FreeResult()
+{
+	do 
+	{ 
+		MYSQL_RES* res = mysql_store_result(m_pMysql); 
+		mysql_free_result(res); 
+	}while(!mysql_next_result(m_pMysql));
+
+	return 0;
+}
+
 unsigned long long CMysql::mysql_GetUserID(const char* szUserName, const char* szPassWord)
 {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 
 	char szSelect[m_nSqlLen] = {0};
-	sprintf(szSelect, "select id from users where username = '%s' and password = '%s'", szUserName, szPassWord);
+	sprintf(szSelect, "select * from users where username = '%s' and password = '%s'", szUserName, szPassWord);
 	printf("%s\n", szSelect);
 	if (mysql_query(m_pMysql, szSelect))
 	{
@@ -49,26 +61,32 @@ unsigned long long CMysql::mysql_GetUserID(const char* szUserName, const char* s
 		return -1;
 	}
 	
-	res = mysql_use_result(m_pMysql);
-	row = mysql_fetch_row(res);
-	
+	res = mysql_store_result(m_pMysql);
+
 	unsigned long long nRet = 0;
-	if (row != NULL)
+	int nRow = mysql_num_rows(res);
+	if(nRow >= 1)
 	{
-		nRet = strtoull(row[0], NULL, 10);
+		row = mysql_fetch_row(res);
+		
+		if (row != NULL)
+		{
+			nRet = strtoull(row[0], NULL, 10);
+		}
 	}
 	
-	mysql_free_result(res);
+	mysql_free_result(res); 
 	
 	return nRet;
 }
 
-int CMysql::mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID)
+int CMysql::mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID, unsigned long long ullMacID)
 {
-	if(!mysql_SelectOnlineUsers(ullUserID)) return -1;
+	if(mysql_SelectOnlineUsers(ullUserID) >= 1) return -1;
 
 	char szInsert[m_nSqlLen] = {0};
-	sprintf(szInsert, "insert online_users(user_id, socket_id) value(%llu, %d)", ullUserID, nSocketID);
+	sprintf(szInsert, "insert online_users(user_id, socket_id, mac_id) value(%llu, %d, %llu)",
+		ullUserID, nSocketID, ullMacID);
 	printf("%s\n", szInsert);
 	if (mysql_query(m_pMysql, szInsert))
 	{
@@ -78,6 +96,8 @@ int CMysql::mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID)
 
 	int nAffectedRow =  mysql_affected_rows(m_pMysql);
 	printf("%d rows affected\n", nAffectedRow);
+
+	mysql_FreeResult();
 
 	return nAffectedRow;
 }
@@ -96,6 +116,8 @@ int CMysql::mysql_DeleteOnlineUsers(int nSocketID)
 	int nAffectedRow =  mysql_affected_rows(m_pMysql);
 	printf("%d rows affected\n", nAffectedRow);
 
+	mysql_FreeResult();
+
 	return nAffectedRow;
 }
 
@@ -113,8 +135,10 @@ int CMysql::mysql_SelectOnlineUsers(int nSocketID)
 		return -1;
 	}
 
-	res = mysql_use_result(m_pMysql);
+	res = mysql_store_result(m_pMysql);
 	int nRow = mysql_num_rows(res);
+
+	mysql_free_result(res); 
 
 	return nRow;
 }
@@ -125,7 +149,7 @@ int CMysql::mysql_SelectOnlineUsers(unsigned long long ullUserID)
 	MYSQL_ROW row;
 
 	char szSelect[m_nSqlLen] = {0};
-	sprintf(szSelect, "select from online_users where user_id = %llu", ullUserID);
+	sprintf(szSelect, "select * from online_users where user_id = %llu", ullUserID);
 	printf("%s\n", szSelect);
 	if (mysql_query(m_pMysql, szSelect))
 	{
@@ -133,8 +157,10 @@ int CMysql::mysql_SelectOnlineUsers(unsigned long long ullUserID)
 		return -1;
 	}
 
-	res = mysql_use_result(m_pMysql);
+	res = mysql_store_result(m_pMysql);
 	int nRow = mysql_num_rows(res);
+
+	mysql_free_result(res); 
 
 	return nRow;
 }
@@ -153,21 +179,29 @@ int CMysql::mysql_SelectUserList(vector<UserNet*>& UserList)
 		return -1;
 	}
 
+	vector<unsigned long long> vecUserID;
 	res = mysql_use_result(m_pMysql);
 	while((row = mysql_fetch_row(res)) != NULL)
 	{
 		UserNet* pUserNet = new UserNet;
 		unsigned long long ullUserID = strtoull(row[0], NULL, 10);
-		pUserNet->ullUserID = ullUserID;
-		if(mysql_SelectOnlineUsers(ullUserID) >= 1)
+		vecUserID.push_back(ullUserID);
+		memcpy(pUserNet->szUserName, row[1], 32);
+		UserList.push_back(pUserNet);
+	}
+	mysql_free_result(res);
+
+	int nSize = vecUserID.size();
+	for(int i = 0; i < nSize; i++)
+	{
+		if(mysql_SelectOnlineUsers(vecUserID[i]) >= 1)
 		{
-			pUserNet->bIsOnline = true;
+			UserList[i]->bIsOnline = true;
 		}
 		else
 		{
-			pUserNet->bIsOnline = false;
+			UserList[i]->bIsOnline = false;
 		}
-		UserList.push_back(pUserNet);
 	}
 
 	return 0;

@@ -17,13 +17,12 @@ char* CMyJson::SetUserListJasonData(const vector<UserNet*> vecUserList)
 	int nCount = vecUserList.size();
 	for(int i = 0; i < nCount; i++)
 	{
-		cJSON *pUserID = cJSON_CreateObject();
-		cJSON_AddNumberToObject(pUserID, "UserID", static_cast<double>(vecUserList[i]->ullUserID));
-		cJSON_AddItemToArray(pArray, pUserID);
+		cJSON *pUserNet = cJSON_CreateObject();
 
-		cJSON *pIsOnline = cJSON_CreateObject();
-		cJSON_AddBoolToObject(pIsOnline, "IsOnline", vecUserList[i]->bIsOnline);
-		cJSON_AddItemToArray(pArray, pIsOnline);
+		cJSON_AddStringToObject(pUserNet, "UserName", (char*)vecUserList[i]->szUserName);
+		cJSON_AddBoolToObject(pUserNet, "IsOnline", vecUserList[i]->bIsOnline);
+
+		cJSON_AddItemToArray(pArray, pUserNet);
 	}
 
 	cJSON_AddItemToObject(pRoot, "UserList", pArray);

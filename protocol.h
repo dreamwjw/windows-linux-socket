@@ -29,7 +29,7 @@ typedef long long              WU_int64_t;
 #define LOGIN_REQ               0x2003             // Client -> Server  --- struct LoginReq
 #define LOGIN_RSP (LOGIN_REQ + 1)                  // Server -> Client  --- struct LoginRsp
 
-#define GET_USER_LIST_REQ       0x2005             // Client -> Server  --- struct UserNet
+#define GET_USER_LIST_REQ       0x2005             // Client -> Server
 #define GET_USER_LIST_RSP (GET_USER_LIST_REQ + 1)  // Server -> Client  --- struct UserListRsp
 
 typedef struct tagHeader
@@ -67,13 +67,13 @@ typedef struct tagLoginRsp
 
 typedef struct tagUserNet
 {
-	WU_uint64_t ullUserID;
+	WU_uint8_t szUserName[32];               //user name 
 	bool        bIsOnline;
 }UserNet;
 
 typedef struct tagUserListRsp
 {
-	WU_uint16_t usLen;
+	WU_uint16_t usLen;                       
 }UserListRsp;//json string append after
 
 #pragma pack(pop)
