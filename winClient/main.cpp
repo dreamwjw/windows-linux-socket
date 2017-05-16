@@ -19,8 +19,8 @@ static CMyJson g_MyJson;
 int testsend(int sclient);
 void MyOutputDebugString(const char *sFormatString, ...);
 
-unsigned __stdcall threadRecv(void* pParam);
-unsigned __stdcall threadSendHeart(void* pParam);
+unsigned int __stdcall threadRecv(void* pParam);
+unsigned int __stdcall threadSendHeart(void* pParam);
 
 void showmenu();
 void operation(int sclient);
@@ -39,10 +39,11 @@ int Keep_Alive_Rsp_Function(const char* RecvBuffer);
 int Login_Req_Function(int sclient);
 int Login_Rsp_Function(int sclient, const char* RecvBuffer);
 int GetUserList_Req_Function(int sclient, unsigned long long ullUserID);
+int GetUserList_Rsp_Function(int sclient, const char* RecvBuffer);
 
 bool g_bExit = false;
 HANDLE g_hThreadRecv = NULL;
-HANDLE g_hThreadSend = NULL;
+HANDLE g_hThreadSendHeart = NULL;
 
 int main(int argc, char* argv[])  
 {  
@@ -72,6 +73,7 @@ int main(int argc, char* argv[])
 	}
 
 	g_hThreadRecv = (HANDLE)_beginthreadex(NULL, 0, &threadRecv, (void*)&sclient, 0, NULL);
+	g_hThreadSendHeart = (HANDLE)_beginthreadex(NULL, 0, &threadSendHeart, (void*)&sclient, 0, NULL);
 
 	showmenu();
 	operation(sclient);
@@ -152,8 +154,6 @@ unsigned int __stdcall threadSendHeart(void* pParam)
 
 	MyOutputDebugString("threadSendHeart end\n");
 
-	delete pParam;
-
 	return 0;
 }
 
@@ -220,6 +220,11 @@ unsigned int __stdcall threadRecv(void* pParam)
 		case LOGIN_RSP:
 			{
 				Login_Rsp_Function(sclient, pDataBuff);
+			}
+			break;
+		case GET_USER_LIST_RSP:
+			{
+				GetUserList_Rsp_Function(sclient, pDataBuff);
 			}
 			break;
 		default:
@@ -293,9 +298,9 @@ void stop(int sclient)
 	CloseHandle(g_hThreadRecv);
 	g_hThreadRecv = NULL;
 
-	WaitForSingleObject(g_hThreadSend, INFINITE);
-	CloseHandle(g_hThreadSend);
-	g_hThreadSend = NULL;
+	WaitForSingleObject(g_hThreadSendHeart, INFINITE);
+	CloseHandle(g_hThreadSendHeart);
+	g_hThreadSendHeart = NULL;
 }
 
 int NonblockingRead(int ifd, unsigned int uiTimeOut)
@@ -476,6 +481,13 @@ int Keep_Alive_Rsp_Function(const char* RecvBuffer)
 
 int Login_Req_Function(int sclient)
 {
+	char szUserName[32] = {0}, szPassWord[32] = {0};
+	printf("UserName:");
+	scanf_s("%s", szUserName, 32);
+	//getchar();
+	printf("PassWord:");
+	scanf_s("%s", szPassWord, 32);
+
 	Header hd;
 	CreateHeader(&hd, LOGIN_REQ, sizeof(LoginReq), WU_SERVER_ID);
 
@@ -483,8 +495,8 @@ int Login_Req_Function(int sclient)
 
 	LoginReq lr;
 	memset(&lr, 0, sizeof(LoginReq));
-	memcpy(lr.szUserName, "wjw", 32);
-	memcpy(lr.szPassWord, "123456", 32);
+	memcpy(lr.szUserName, szUserName, 32);
+	memcpy(lr.szPassWord, szPassWord, 32);
 
 	Net_Send(sclient, (char*)&lr, sizeof(LoginReq), 0);
 
@@ -499,9 +511,6 @@ int Login_Rsp_Function(int sclient, const char* RecvBuffer)
 	if(pLoginRsp->ucResult == 0)
 	{
 		printf("login success, reason:%s\n", pLoginRsp->szReason);
-		int* psclient = new int;
-		*psclient = sclient;
-		g_hThreadSend = (HANDLE)_beginthreadex(NULL, 0, &threadSendHeart, (void*)psclient, 0, NULL);
 	}
 	else
 	{
@@ -514,17 +523,9 @@ int Login_Rsp_Function(int sclient, const char* RecvBuffer)
 int GetUserList_Req_Function(int sclient, unsigned long long ullUserID)
 {
 	Header hd;
-	CreateHeader(&hd, GET_USER_LIST_REQ, sizeof(LoginReq), WU_SERVER_ID);
+	CreateHeader(&hd, GET_USER_LIST_REQ, 0, WU_SERVER_ID);
 
 	Net_Send(sclient, (char*)&hd, sizeof(hd), 0);
-
-	//因为数据包一定要有数据，所以就随便加个数据进去，其实这个数据是没有用到的
-	UserNet un;
-	memset(&un, 0, sizeof(UserNet));
-	un.ullUserID = ullUserID;
-	un.bIsOnline = true;
-
-	Net_Send(sclient, (char*)&un, sizeof(UserNet), 0);
 
 	return 0;
 }
@@ -535,16 +536,17 @@ int GetUserList_Rsp_Function(int sclient, const char* RecvBuffer)
 
 	UserListRsp* pUserListRsp = (UserListRsp*)RecvBuffer;
 	char* pUserList = new char[pUserListRsp->usLen];
-	memcpy(pUserList, pUserListRsp+sizeof(UserListRsp), pUserListRsp->usLen);
+	memcpy(pUserList, RecvBuffer+sizeof(UserListRsp), pUserListRsp->usLen);
 
 	vector<UserNet*> vecUserList;
 	g_MyJson.GetUserListJasonData(pUserList, vecUserList);
-
-
+	delete[] pUserList;
 
 	int nCount = vecUserList.size();
 	for(int i = 0; i < nCount; i++)
 	{
+		printf("UserName: %s\t", vecUserList[i]->szUserName);
+		printf("Online: %d\n", vecUserList[i]->bIsOnline?1:0);
 		if(vecUserList[i] != NULL)
 		{
 			delete vecUserList[i];

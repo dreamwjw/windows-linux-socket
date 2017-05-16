@@ -43,7 +43,7 @@ int CMyJson::GetUserListJasonData(char* szData, vector<UserNet*>& vecUserList)
 	cJSON *pRoot = cJSON_Parse(szData);
 	if(pRoot == NULL) 
 	{
-		MyOutputDebugString("Jason Parse Failed");
+		MyOutputDebugString("Jason Parse Failed\n");
 		return -1;
 	}
 
@@ -59,7 +59,7 @@ int CMyJson::GetUserListJasonData(char* szData, vector<UserNet*>& vecUserList)
 
 			if(pArray == NULL) continue;
 
-			pUserNet->ullUserID = static_cast<unsigned long long>(GetItemDouble(pArray, "UserID"));
+			memcpy(pUserNet->szUserName, GetItemString(pArray, "UserName").c_str(), 32);
 			pUserNet->bIsOnline = (GetItemBool(pArray, "IsOnline") == 0)?true:false;
 
 			vecUserList.push_back(pUserNet);
