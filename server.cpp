@@ -1,12 +1,36 @@
-#include "function.h"
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <time.h>
+
+#include "protocol.h"
+#include "NetWork.h"
+#include "mysql.h"
+
+#define HELLO_WORLD_SERVER_PORT 7878
+#define LENGTH_OF_LISTEN_QUEUE 20
+#define BUFFER_SIZE 1024
+#define NUM_THREADS 5
+
+CMysql* g_pMysql;
+CNetWork g_NetWork;
 
 void *workthread(void *socket);
 
-CMysql* g_pMysql = CMysql::GetInstance();
-CMyJson g_MyJson;
-
 int main(int argc, char **argv)
 {
+	g_pMysql = CMysql::GetInstance();
+	if(g_pMysql == NULL)
+	{
+		printf("mysql connect failed");
+		return -1;
+	}
+
 	struct sockaddr_in server_addr;
 	int server_socket;
 	int opt = 1;
@@ -106,7 +130,7 @@ void *workthread(void *socket)
 
 		Header hd;
 		bzero(&hd, sizeof(Header));
-		length = Net_Receive(client_socket, (char*)&hd, sizeof(Header), 0);
+		length = g_NetWork.Net_Receive(client_socket, (char*)&hd, sizeof(Header), 0);
 		if (length < 0) break;
 		//else if(length == 0) continue;
 
@@ -119,9 +143,9 @@ void *workthread(void *socket)
 				hd.szFlag[3]);
 		  
 			bool bFlag = false;
-			if (SearchPacketHeader(client_socket, (char *)hd.szFlag, WU_HEADER_FLAG_LEN))
+			if (g_NetWork.SearchPacketHeader(client_socket, (char *)hd.szFlag, WU_HEADER_FLAG_LEN))
 			{
-				length = Net_Receive(client_socket, (char*)&hd.usCode, sizeof(Header) - WU_HEADER_FLAG_LEN, 0); 
+				length = g_NetWork.Net_Receive(client_socket, (char*)&hd.usCode, sizeof(Header) - WU_HEADER_FLAG_LEN, 0); 
 				if (length == sizeof(Header) - WU_HEADER_FLAG_LEN)
 					bFlag = true;
 			}
@@ -140,7 +164,7 @@ void *workthread(void *socket)
 			}
 			bzero(pDataBuff, uiDataLen);
 
-			length = Net_Receive(client_socket, pDataBuff, uiDataLen, 0);
+			length = g_NetWork.Net_Receive(client_socket, pDataBuff, uiDataLen, 0);
 			if (length < 0) break;
 			//else if(length == 0) continue;
 		}
@@ -150,22 +174,22 @@ void *workthread(void *socket)
 		case KEEP_ALIVE_REQ:
 			{
 				time(&LastTimer);
-				Keep_Alive_Req_Function(client_socket, &hd, pDataBuff);
+				g_NetWork.Keep_Alive_Req_Function(client_socket, &hd, pDataBuff);
 			}
 			break;
 		case LOGIN_REQ:
 			{
-				ullClientID = Login_Req_Function(client_socket, &hd, pDataBuff, hd.ullSrcId);
+				ullClientID = g_NetWork.Login_Req_Function(client_socket, &hd, pDataBuff, hd.ullSrcId);
 			}
 			break;
 		case GET_USER_LIST_REQ:
 			{
-				GetUserList_Req_Function(client_socket, ullClientID);
+				g_NetWork.GetUserList_Req_Function(client_socket, ullClientID);
 			}
 			break;
 		case TALK_WITH_USER_REQ:
 			{
-				TalkWithUser_Req_Function(client_socket, pDataBuff, ullClientID);
+				g_NetWork.TalkWithUser_Req_Function(client_socket, pDataBuff, ullClientID);
 			}
 			break;
 		default:
@@ -174,6 +198,8 @@ void *workthread(void *socket)
 
 		free(pDataBuff);
 	}
+
+	g_pMysql->mysql_DeleteOnlineUsers(client_socket);
 
 	close(client_socket);
 }
