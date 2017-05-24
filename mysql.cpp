@@ -3,6 +3,8 @@
 
 #include "mysql.h"
 
+CMysql* g_pMysql;
+
 CMysql* CMysql::m_pCMysql = NULL;
 
 CMysql::CMysql()
@@ -113,10 +115,8 @@ unsigned long long CMysql::mysql_GetUserID(const char* szUserName)
 	return ullUserID;
 }
 
-int CMysql::mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID, unsigned long long ullMacID)
+int CMysql::mysql_AddOnlineUser(int nSocketID, unsigned long long ullUserID, unsigned long long ullMacID)
 {
-	if(mysql_SelectOnlineUsers(ullUserID) >= 1) return -1;
-
 	char szInsert[m_nSqlLen] = {0};
 	sprintf(szInsert, "insert online_users(user_id, socket_id, mac_id) value(%llu, %d, %llu)",
 		ullUserID, nSocketID, ullMacID);
@@ -124,7 +124,7 @@ int CMysql::mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID, un
 	if (mysql_query(m_pMysql, szInsert))
 	{
 		printf("%s\n", mysql_error(m_pMysql));
-		return -2;
+		return -1;
 	}
 
 	int nAffectedRow =  mysql_affected_rows(m_pMysql);
@@ -135,7 +135,7 @@ int CMysql::mysql_AddOnlineUsers(int nSocketID, unsigned long long ullUserID, un
 	return nAffectedRow;
 }
 
-int CMysql::mysql_DeleteOnlineUsers(int nSocketID)
+int CMysql::mysql_DeleteOnlineUser(int nSocketID)
 {
 	char szDelete[m_nSqlLen] = {0};
 	sprintf(szDelete, "delete from online_users where socket_id = %d", nSocketID);
@@ -154,13 +154,37 @@ int CMysql::mysql_DeleteOnlineUsers(int nSocketID)
 	return nAffectedRow;
 }
 
-int CMysql::mysql_SelectOnlineUsers(int nSocketID)
+unsigned long long CMysql::mysql_SelectClientIDBySocketID(int nSocketID)
 {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 
 	char szSelect[m_nSqlLen] = {0};
-	sprintf(szSelect, "select from online_users where socket_id = %d", nSocketID);
+	sprintf(szSelect, "select user_id from online_users where socket_id = %d", nSocketID);
+	printf("%s\n", szSelect);
+	if (mysql_query(m_pMysql, szSelect))
+	{
+		printf("%s\n", mysql_error(m_pMysql));
+		return 0;
+	}
+
+	res = mysql_store_result(m_pMysql);
+	row = mysql_fetch_row(res);
+	unsigned long long ullClientID = 0;
+	if(row != NULL) ullClientID = strtoull(row[0], NULL, 10);
+
+	mysql_free_result(res); 
+
+	return ullClientID;
+}
+
+int CMysql::mysql_SelectUserIsOnline(int nSocketID)
+{
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+
+	char szSelect[m_nSqlLen] = {0};
+	sprintf(szSelect, "select * from online_users where socket_id = %d", nSocketID);
 	printf("%s\n", szSelect);
 	if (mysql_query(m_pMysql, szSelect))
 	{
@@ -176,7 +200,7 @@ int CMysql::mysql_SelectOnlineUsers(int nSocketID)
 	return nRow;
 }
 
-int CMysql::mysql_SelectOnlineUsers(unsigned long long ullUserID)
+int CMysql::mysql_SelectUserIsOnline(unsigned long long ullUserID)
 {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
@@ -227,7 +251,7 @@ int CMysql::mysql_SelectUserList(vector<UserNet*>& UserList)
 	int nSize = vecUserID.size();
 	for(int i = 0; i < nSize; i++)
 	{
-		if(mysql_SelectOnlineUsers(vecUserID[i]) >= 1)
+		if(mysql_SelectUserIsOnline(vecUserID[i]) >= 1)
 		{
 			UserList[i]->bIsOnline = true;
 		}

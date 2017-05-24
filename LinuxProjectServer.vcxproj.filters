@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{5a6c3205-e954-4f73-b88d-cc223ed90344}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{4e3ace9a-96c2-4f6b-ba14-e6f0654124ed}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{3d789678-37f8-4003-903b-a50e9a2e92d9}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Make files">
+      <UniqueIdentifier>{bdc19c90-f8bc-4d88-81a5-a879d147bb2a}</UniqueIdentifier>
+      <Extensions>*.mak</Extensions>
+    </Filter>
+    <Filter Include="VisualGDB settings">
+      <UniqueIdentifier>{fabf2303-e260-4782-93ef-cf705e05a303}</UniqueIdentifier>
+      <Extensions>*.vgdbsettings</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile" />
+    <None Include="debug.mak">
+      <Filter>Make files</Filter>
+    </None>
+    <None Include="LinuxProjectServer-Debug.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="release.mak">
+      <Filter>Make files</Filter>
+    </None>
+    <None Include="LinuxProjectServer-Release.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="protocol.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="mysql.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="cJSON.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="MyJson.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="NetWork.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="struct.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="server.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="mysql.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="cJSON.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="MyJson.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="NetWork.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -1,9 +1,10 @@
 #include "MyJson.h"
 
+CMyJson g_MyJson;
+
 CMyJson::CMyJson(void)
 {
 }
-
 
 CMyJson::~CMyJson(void)
 {

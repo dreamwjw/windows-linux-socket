@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "NetWork.h"
 #include "mysql.h"
@@ -10,8 +11,10 @@
 
 #define SOCKET_ERROR -1
 
+CNetWork g_NetWork;
+
 extern CMysql* g_pMysql;
-CMyJson g_MyJson;
+extern CMyJson g_MyJson;
 
 CNetWork::CNetWork(void)
 {
@@ -25,18 +28,6 @@ char CNetWork::tolower(char c) {
 	if(c >= 'A' && c <= 'Z')
 		c += 'a' - 'A';
 	return c;
-}
-
-int CNetWork::Init()
-{
-	g_pMysql = CMysql::GetInstance();
-	if(g_pMysql == NULL)
-	{
-		printf("mysql connect failed");
-		return -1;
-	}
-	
-	return 0;
 }
 
 bool CNetWork::SearchPacketHeader(const int fd, char *buf,const int &iBufLen)
@@ -84,6 +75,15 @@ bool CNetWork::SearchPacketHeader(const int fd, char *buf,const int &iBufLen)
 	}
 }
 
+int CNetWork::setSocketNonBlock(int socket, int enable)
+{
+	u_long param = enable;
+	if (enable)
+		return fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
+	else
+		return fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) & ~O_NONBLOCK);
+}
+
 int CNetWork::NonblockingRead(int ifd, unsigned int uiTimeOut)
 {
 	if(ifd < 0)
@@ -100,7 +100,7 @@ int CNetWork::NonblockingRead(int ifd, unsigned int uiTimeOut)
 	tv.tv_usec = 1000 * (uiTimeOut % 1000);
 
 	int iMaxFd = ifd + 1;
-	int iRes = select(iMaxFd, &read_set, NULL, NULL, &tv);
+	int iRes = select(iMaxFd, &read_set, NULL, NULL, &tv);//0 --- time out; -1 --- error
 
 	return iRes;
 }
@@ -135,19 +135,19 @@ int CNetWork::Net_Receive(int client_socket, char* buf, int len, int flag)
 		printf("client[%d] Nonblocking Read error, return[%d]\n", client_socket, nRet);
 	}
 
+	if(nRet == 0) return 0;
+
 	int length = recv(client_socket, buf, len, flag);
 
 	if(length == 0)
 	{
 		printf("client[%d] exit\n", client_socket);
-		g_pMysql->mysql_DeleteOnlineUsers(client_socket);
 		return -1;
 	}
 
 	if(length < 0)
 	{
 		printf("client[%d] exception exit\n", client_socket);
-		g_pMysql->mysql_DeleteOnlineUsers(client_socket);
 		return -2;
 	}
 
@@ -161,10 +161,12 @@ int CNetWork::Net_Send(int client_socket, char* buf, int len, int flag)
 {
 	int nRet = NonblockingWrite(client_socket, WU_NETWORK_TIMEOUT);
 
-	if(nRet == 0 || nRet == SOCKET_ERROR)
+	if(nRet < 0)
 	{
 		printf("client[%d] Nonblocking Write error, return[%d]\n", client_socket, nRet);
 	}
+
+	if(nRet == 0) return 0;
 
 	int length = send(client_socket, buf, len, flag);
 
@@ -263,14 +265,15 @@ int CNetWork::Login_Rsp_Function(int client_socket, unsigned long long ullClient
 	return nRet;
 }
 
-unsigned long long CNetWork::Login_Req_Function(int client_socket, Header* pHeader, const char* RecvBuffer, unsigned long long ullMacID)
+int CNetWork::Login_Req_Function(int client_socket, Header* pHeader, const char* RecvBuffer, unsigned long long ullMacID)
 {
 	printf("LOGIN_REQ\n");
 
 	if(RecvBuffer == NULL)
 	{
 		printf("RecvBuffer is null");
-		return 0;
+		Login_Rsp_Function(client_socket, 0, 3);
+		return -1;
 	}
 
 	LoginReq* pLoginReq = (LoginReq*)RecvBuffer;
@@ -281,14 +284,24 @@ unsigned long long CNetWork::Login_Req_Function(int client_socket, Header* pHead
 	unsigned char ucResult = 0;
 	if (ullClientID > 0)
 	{
-		if(g_pMysql->mysql_AddOnlineUsers(client_socket, ullClientID, ullMacID) == 1)
+		if(UserIsOnline(ullClientID))
+		{
+			printf("%s login failed, user has login\n", (char*)pLoginReq->szUserName);
+			ucResult = 2;
+		}
+		else if(UserIsOnline(client_socket))
+		{
+			printf("%s login failed, unknown error\n", (char*)pLoginReq->szUserName);
+			ucResult = 3;
+		}
+		else if(g_pMysql->mysql_AddOnlineUser(client_socket, ullClientID, ullMacID) == 1)
 		{
 			printf("%s login success\n", (char*)pLoginReq->szUserName);
 		}
 		else
 		{
-			printf("%s login failed, user has login\n", (char*)pLoginReq->szUserName);
-			ucResult = 2;
+			printf("%s login failed, unknown error\n", (char*)pLoginReq->szUserName);
+			ucResult = 3;
 		}
 	}
 	else
@@ -299,14 +312,23 @@ unsigned long long CNetWork::Login_Req_Function(int client_socket, Header* pHead
 
 	Login_Rsp_Function(client_socket, ullClientID, ucResult);
 
-	return ullClientID;
+	return 0;
+}
+
+bool CNetWork::UserIsOnline(int nSocketID)
+{
+	printf("UserIsOnline\n");
+
+	int nRet = g_pMysql->mysql_SelectUserIsOnline(nSocketID);
+	if(nRet >= 1) return true;
+	else return false;
 }
 
 bool CNetWork::UserIsOnline(unsigned long long ullClientID)
 {
 	printf("UserIsOnline\n");
 
-	int nRet = g_pMysql->mysql_SelectOnlineUsers(ullClientID);
+	int nRet = g_pMysql->mysql_SelectUserIsOnline(ullClientID);
 	if(nRet >= 1) return true;
 	else return false;
 }
@@ -350,15 +372,18 @@ int CNetWork::GetUserList_Rsp_Function(int client_socket, unsigned long long ull
 	return 0;
 }
 
-int CNetWork::GetUserList_Req_Function(int client_socket, unsigned long long ullClientID)
+int CNetWork::GetUserList_Req_Function(int client_socket)
 {
 	printf("GET_USER_LIST_REQ\n");
 
-	if(!UserIsOnline(ullClientID))
+	if(!UserIsOnline(client_socket))
 	{
-		printf("user[%llu] is offline\n", ullClientID);
+		printf("client[%d] is offline\n", client_socket);
 		return -1;
 	}
+
+	unsigned long long ullClientID = g_pMysql->mysql_SelectClientIDBySocketID(client_socket);
+	if(ullClientID == 0) return -1;
 
 	GetUserList_Rsp_Function(client_socket, ullClientID);
 
@@ -390,13 +415,19 @@ int CNetWork::TalkWithUser_Rsp_Function(int ToUserSocketID, unsigned long long u
 	return 0;
 }
 
-int CNetWork::TalkWithUser_Req_Function(int client_socket, const char* RecvBuffer, unsigned long long ullClientID)
+int CNetWork::TalkWithUser_Req_Function(int client_socket, const char* RecvBuffer)
 {
 	printf("TALK_WITH_USER_REQ\n");
 
-	if(!UserIsOnline(ullClientID))
+	if(RecvBuffer == NULL)
 	{
-		printf("user[%llu] is offline\n", ullClientID);
+		printf("RecvBuffer is null");
+		return -1;
+	}
+
+	if(!UserIsOnline(client_socket))
+	{
+		printf("client[%d] is offline\n", client_socket);
 		return -1;
 	}
 
