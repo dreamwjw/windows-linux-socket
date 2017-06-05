@@ -57,11 +57,10 @@ int main(int argc, char **argv)
 	}
 
 	g_bExit = true;
+	close(server_socket);
 	pthread_join(ta, NULL);
 	pthread_join(ts, NULL);
 	pthread_join(tr, NULL);
-	
-	close(server_socket);
 
 	return 0;
 }
@@ -158,7 +157,12 @@ void* ThreadAccept(void* socket)
 
 void* ThreadSend(void* socket)
 {
+	while(!g_bExit)
+	{
+		g_NetWork.DoSend();
 
+		usleep(10);
+	}
 }
 
 void* ThreadRecv(void* socket)
@@ -196,6 +200,8 @@ void* ThreadRecv(void* socket)
 				continue;
 			}
 		}
+
+		usleep(10);
 	}
 	
 }

@@ -10,7 +10,7 @@
 #define WU_HEADER_LEN          26
 #define WU_HEADER_FLAG_LEN     4
 #define WU_HEADER_FLAG         "SK01"
-#define WU_NETWORK_TIMEOUT	   1000 * 10
+#define WU_NETWORK_TIMEOUT	   0//1000 * 10
 #define WU_SERVER_ID           0
 #define WU_KEEP_ALIVE_TIMEOUT  10
 

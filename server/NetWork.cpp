@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <pthread.h>
 
 #include "NetWork.h"
 #include "mysql.h"
@@ -18,10 +19,12 @@ extern CMyJson g_MyJson;
 
 CNetWork::CNetWork(void)
 {
+	//pthread_mutex_init(&m_mutexSendBuff,NULL);
 }
 
 CNetWork::~CNetWork(void)
 {
+	//pthread_mutex_destroy(&m_mutexSendBuff);
 }
 
 char CNetWork::tolower(char c) {
@@ -182,6 +185,41 @@ int CNetWork::Net_Send(int client_socket, char* buf, int len, int flag)
 	return length;
 }
 
+int CNetWork::SaveSendBuff(int client_socket, char* buf, int len, int flag)
+{
+	//pthread_mutex_lock(&m_mutexSendBuff);
+
+	StruSendBuff sendbuff;
+	sendbuff.nSocket = client_socket;
+	sendbuff.szData = (char*)malloc(len);
+	if(sendbuff.szData == NULL) return -1;
+	memcpy(sendbuff.szData, buf, len);
+	sendbuff.nLen = len;
+	sendbuff.nFlag = flag;
+		
+	m_vecSendBuff.push_back(sendbuff);
+
+	//pthread_mutex_unlock(&m_mutexSendBuff);
+}
+
+int CNetWork::DoSend()
+{
+	//pthread_mutex_lock(&m_mutexSendBuff);
+
+	int nSize = m_vecSendBuff.size();
+	for(int i = 0; i < nSize; i++)
+	{
+		StruSendBuff sendbuff = m_vecSendBuff.front();
+
+		Net_Send(sendbuff.nSocket, sendbuff.szData, sendbuff.nLen, sendbuff.nFlag);
+
+		free(sendbuff.szData);
+		m_vecSendBuff.pop_front();
+	}
+
+	//pthread_mutex_unlock(&m_mutexSendBuff);
+}
+
 int CNetWork::CreateHeader(Header* pHead, WU_uint16_t usCode,
 	WU_uint32_t uiDataLen, WU_uint64_t ullDstId)
 {
@@ -203,12 +241,12 @@ int CNetWork::Keep_Alive_Rsp_Function(int client_socket, unsigned long long ullC
 	memset(&hd, 0, sizeof(Header));
 	CreateHeader(&hd, KEEP_ALIVE_RSP, sizeof(KeepAliveRsp), ullClientID);
 
-	Net_Send(client_socket, (char*)&hd, sizeof(hd), 0);
+	SaveSendBuff(client_socket, (char*)&hd, sizeof(hd), 0);
 
 	KeepAliveRsp kar;
 	kar.usAliveSeq = usAliveSeq;
 
-	Net_Send(client_socket, (char*)&kar, sizeof(KeepAliveRsp), 0);
+	SaveSendBuff(client_socket, (char*)&kar, sizeof(KeepAliveRsp), 0);
 
 	return nRet;
 }
@@ -239,7 +277,7 @@ int CNetWork::Login_Rsp_Function(int client_socket, unsigned long long ullClient
 	memset(&hd, 0, sizeof(Header));
 	CreateHeader(&hd, LOGIN_RSP, sizeof(LoginRsp), ullClientID);
 
-	Net_Send(client_socket, (char*)&hd, sizeof(hd), 0);
+	SaveSendBuff(client_socket, (char*)&hd, sizeof(hd), 0);
 
 	LoginRsp lr;
 	memset(&lr, 0, sizeof(LoginRsp));
@@ -260,7 +298,7 @@ int CNetWork::Login_Rsp_Function(int client_socket, unsigned long long ullClient
 		break;
 	}
 
-	Net_Send(client_socket, (char*)&lr, sizeof(LoginRsp), 0);
+	SaveSendBuff(client_socket, (char*)&lr, sizeof(LoginRsp), 0);
 
 	return nRet;
 }
@@ -355,7 +393,7 @@ int CNetWork::GetUserList_Rsp_Function(int client_socket, unsigned long long ull
 	memset(&hd, 0, sizeof(Header));
 	CreateHeader(&hd, GET_USER_LIST_RSP, strlen(szUserList) + sizeof(UserListRsp), ullClientID);
 
-	Net_Send(client_socket, (char*)&hd, sizeof(hd), 0);
+	SaveSendBuff(client_socket, (char*)&hd, sizeof(hd), 0);
 
 	UserListRsp ulr;
 	memset(&ulr, 0, sizeof(UserListRsp));
@@ -364,7 +402,7 @@ int CNetWork::GetUserList_Rsp_Function(int client_socket, unsigned long long ull
 	memcpy(szData, &ulr, sizeof(UserListRsp));
 	memcpy(szData+sizeof(UserListRsp), szUserList, ulr.usLen);
 
-	Net_Send(client_socket, szData, sizeof(UserListRsp)+ulr.usLen, 0);
+	SaveSendBuff(client_socket, szData, sizeof(UserListRsp)+ulr.usLen, 0);
 
 	cJason_free(szUserList);
 	free(szData);
@@ -397,7 +435,7 @@ int CNetWork::TalkWithUser_Rsp_Function(int ToUserSocketID, unsigned long long u
 	memset(&hd, 0, sizeof(Header));
 	CreateHeader(&hd, TALK_WITH_USER_RSP, strlen(szContent)+sizeof(TalkWithUser), ullToUserID);
 
-	Net_Send(ToUserSocketID, (char*)&hd, sizeof(hd), 0);
+	SaveSendBuff(ToUserSocketID, (char*)&hd, sizeof(hd), 0);
 
 	TalkWithUser twu;
 	memset(&twu, 0, sizeof(TalkWithUser));
@@ -408,7 +446,7 @@ int CNetWork::TalkWithUser_Rsp_Function(int ToUserSocketID, unsigned long long u
 	memcpy(szData, &twu, sizeof(TalkWithUser));
 	memcpy(szData+sizeof(TalkWithUser), szContent, twu.usLen);
 
-	Net_Send(ToUserSocketID, szData, sizeof(TalkWithUser)+twu.usLen, 0);
+	SaveSendBuff(ToUserSocketID, szData, sizeof(TalkWithUser)+twu.usLen, 0);
 
 	free(szData);
 

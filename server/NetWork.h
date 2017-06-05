@@ -2,6 +2,9 @@
 
 #include "protocol.h"
 
+#include <list>
+using namespace std;
+
 class CNetWork
 {
 public:
@@ -9,7 +12,19 @@ public:
 	~CNetWork(void);
 
 private:
+	typedef struct tagStruSendBuff
+	{
+		int nSocket;
+		char* szData;
+		int nLen;
+		int nFlag;
+	}StruSendBuff;
+	list<StruSendBuff> m_vecSendBuff;
+	//pthread_mutex_t m_mutexSendBuff;
+
+private:
 	char tolower(char c);
+	int SaveSendBuff(int client_socket, char* buf, int len, int flag);
 
 public:
 	int setSocketNonBlock(int socket, int enable);
@@ -18,6 +33,7 @@ public:
 	int NonblockingWrite(int ifd, unsigned int uiTimeOut);
 	int Net_Receive(int client_socket, char* buf, int len, int flag);
 	int Net_Send(int client_socket, char* buf, int len, int flag);
+	int DoSend();
 	int CreateHeader(Header* pHead, WU_uint16_t usCode, WU_uint32_t uiDataLen, WU_uint64_t ullDstId);
 	int Keep_Alive_Rsp_Function(int client_socket, unsigned long long ullClientID, unsigned short usAliveSeq);
 	int Keep_Alive_Req_Function(int client_socket, Header* pHeader, const char* RecvBuffer);
