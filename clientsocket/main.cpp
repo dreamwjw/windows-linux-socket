@@ -229,6 +229,9 @@ void operation(int sclient)
 			{
 				system("cls");
 				showmenu();
+
+				//清屏之后清空输入
+				while(getchar() != '\n') ;
 			}
 			break;
 		case 1:
