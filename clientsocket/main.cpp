@@ -114,7 +114,7 @@ unsigned int __stdcall threadSendHeart(void* pParam)
 		long long llTimeNow = time(NULL);
 		if(llTimeNow - llLastTime > 3)
 		{
-			g_NetWork.Keep_Alive_Req_Function(sclient);
+			g_NetWork.Keep_Alive_Req_Function_CP(sclient);
 			llLastTime = llTimeNow;
 		}
 
@@ -242,17 +242,17 @@ void operation(int sclient)
 			break;
 		case 2:
 			{
-				g_NetWork.Login_Req_Function(sclient);
+				g_NetWork.Login_Req_Function_CP(sclient);
 			}
 			break;
 		case 3:
 			{
-				g_NetWork.GetUserList_Req_Function(sclient);
+				g_NetWork.GetUserList_Req_Function_CP(sclient);
 			}
 			break;
 		case 4:
 			{
-				g_NetWork.TalkWithUser_Req_Function(sclient);
+				g_NetWork.TalkWithUser_Req_Function_CP(sclient);
 			}
 			break;
 		default:

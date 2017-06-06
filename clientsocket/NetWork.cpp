@@ -189,6 +189,23 @@ int CNetWork::Keep_Alive_Req_Function(int sclient)
 	return 0;
 }
 
+int CNetWork::Keep_Alive_Req_Function_CP(int sclient)
+{
+	char* szData = (char*)malloc(sizeof(Header) + sizeof(KeepAliveReq));
+	Header* pHeader = (Header*)szData;
+	CreateHeader(pHeader, KEEP_ALIVE_REQ, sizeof(KeepAliveReq), WU_SERVER_ID);
+	KeepAliveReq* pKeepAliveReq = (KeepAliveReq*)(szData+sizeof(Header));
+	pKeepAliveReq->usAliveSeq = g_usAliveSeq;
+	Net_Send(sclient, szData, sizeof(Header) + sizeof(KeepAliveReq), 0);
+	free(szData);
+
+	if(g_usAliveSeq > 10000)
+		g_usAliveSeq = 0;
+	g_usAliveSeq++;
+
+	return 0;
+}
+
 int CNetWork::Keep_Alive_Rsp_Function(const char* RecvBuffer)
 {
 	g_Common.MyOutputDebugString("KEEP_ALIVE_RSP\n");
@@ -223,6 +240,27 @@ int CNetWork::Login_Req_Function(int sclient)
 	return 0;
 }
 
+int CNetWork::Login_Req_Function_CP(int sclient)
+{
+	char szPassWord[32] = {0};
+	printf("UserName:");
+	scanf_s("%s", g_szUserName, 32);
+	//getchar();
+	printf("PassWord:");
+	scanf_s("%s", szPassWord, 32);
+
+	char* szData = (char*)malloc(sizeof(Header) + sizeof(LoginReq));
+	Header* pHeader = (Header*)szData;
+	CreateHeader(pHeader, LOGIN_REQ, sizeof(LoginReq), WU_SERVER_ID);
+	LoginReq* pLoginReq = (LoginReq*)(szData+sizeof(Header));
+	memcpy(pLoginReq->szUserName, g_szUserName, 32);
+	memcpy(pLoginReq->szPassWord, szPassWord, 32);
+	Net_Send(sclient, szData, sizeof(Header) + sizeof(LoginReq), 0);
+	free(szData);
+
+	return 0;
+}
+
 int CNetWork::Login_Rsp_Function(int sclient, const char* RecvBuffer)
 {
 	printf("LOGIN_RSP\n");
@@ -241,6 +279,16 @@ int CNetWork::Login_Rsp_Function(int sclient, const char* RecvBuffer)
 }
 
 int CNetWork::GetUserList_Req_Function(int sclient)
+{
+	Header hd;
+	CreateHeader(&hd, GET_USER_LIST_REQ, 0, WU_SERVER_ID);
+
+	Net_Send(sclient, (char*)&hd, sizeof(hd), 0);
+
+	return 0;
+}
+
+int CNetWork::GetUserList_Req_Function_CP(int sclient)
 {
 	Header hd;
 	CreateHeader(&hd, GET_USER_LIST_REQ, 0, WU_SERVER_ID);
@@ -304,6 +352,32 @@ int CNetWork::TalkWithUser_Req_Function(int sclient)
 
 	Net_Send(sclient, szData, sizeof(TalkWithUser)+twu.usLen, 0);
 
+	free(szData);
+
+	return 0;
+}
+
+int CNetWork::TalkWithUser_Req_Function_CP(int sclient)
+{
+	printf("please follow this format, \"username,......\" \n");
+	char szText[1024] = {0};
+	scanf_s("%s", szText, 1024);
+
+	char szContent[1024] = {0};
+	char szUserName[32] = {0};
+	g_Common.mystrchr(szText, ',', szUserName, szContent);
+
+	char* szData = (char*)malloc(sizeof(Header) + sizeof(TalkWithUser)+strlen(szContent));
+	Header* pHeader = (Header*)szData;
+	CreateHeader(pHeader, TALK_WITH_USER_REQ, strlen(szContent)+sizeof(TalkWithUser), WU_SERVER_ID);
+	TalkWithUser* pTalkWithUser = (TalkWithUser*)(szData+sizeof(Header));
+	memcpy(pTalkWithUser->szFromUser, g_szUserName, 32);
+	memcpy(pTalkWithUser->szToUser, szUserName, 32);
+	pTalkWithUser->usLen = strlen(szContent);
+	//这句代码错误，因为pTalkWithUser是TalkWithUser类型的指针，如果内存拷贝超出TalkWithUser的长度则拷贝失败
+	//memcpy(pTalkWithUser+sizeof(TalkWithUser), szContent, strlen(szContent));
+	memcpy(szData+sizeof(Header)+sizeof(TalkWithUser), szContent, strlen(szContent));
+	Net_Send(sclient, szData, sizeof(Header)+sizeof(TalkWithUser)+strlen(szContent), 0);
 	free(szData);
 
 	return 0;
